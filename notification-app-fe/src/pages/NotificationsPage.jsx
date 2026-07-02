@@ -16,19 +16,27 @@ import { NotificationFilter } from "../components/NotificationFilter";
 import { useNotifications } from "../hooks/useNotifications";
 
 export function NotificationsPage() {
-  const [filter, setFilter] = useState();
-  const [page, setPage] = useState("1");
+  const [filter, setFilter] = useState("All");
+  const [page, setPage] = useState(1);
 
-  const { notifications, totalPages, loading, error } = useNotifications();
+  const { notifications, totalPages, loading, error, markAsRead, remove } = useNotifications();
 
-  const unreadCount = 2;
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
+  const visibleNotifications = notifications.filter((notification) => {
+    if (filter === "All" || !filter) {
+      return true;
+    }
+
+    return notification.category === filter;
+  });
 
   const handleFilterChange = (newFilter) => {
-
+    setFilter(newFilter);
+    setPage(1);
   };
 
   const handlePageChange = (_, newPage) => {
-
+    setPage(newPage);
   };
 
   return (
@@ -48,7 +56,7 @@ export function NotificationsPage() {
         <NotificationFilter value={filter} onChange={handleFilterChange} />
       </Box>
 
-      {true && (
+      {loading && (
         <Box display="flex" justifyContent="center" py={6}>
           <CircularProgress />
         </Box>
@@ -58,23 +66,28 @@ export function NotificationsPage() {
         <Alert severity="error">Failed to load notifications: {error}</Alert>
       )}
 
-      {loading && !error && notifications.length == "0" && (
-        <Alert severity="info">Something message</Alert>
+      {!loading && !error && visibleNotifications.length === 0 && (
+        <Alert severity="info">No notifications available for this filter.</Alert>
       )}
 
-      {loading && !error && notifications.length > 0 && (
+      {!loading && !error && visibleNotifications.length > 0 && (
         <Stack spacing={1.5}>
-          {notifications.map((n) => (
-            <></>
+          {visibleNotifications.map((notification) => (
+            <NotificationCard
+              key={notification.id}
+              notification={notification}
+              onMarkRead={markAsRead}
+              onDelete={remove}
+            />
           ))}
         </Stack>
       )}
 
-      {!loading && (
+      {!loading && !error && (
         <Box display="flex" justifyContent="center" mt={4}>
           <Pagination
-            count={totalPages}
-            page={page}
+            count={Math.max(totalPages, 1)}
+            page={page - 1}
             onChange={handlePageChange}
             color="primary"
             shape="rounded"
